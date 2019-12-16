@@ -43,7 +43,7 @@
     "eventemitter3": "~2.0.3",
     "extend": "~3.0.0",
     "parchment": "1.0.9",
-    "quill-delta": "github:tomasztunik/delta#im-fork"
+    "quill-delta": "github:ImpactMapper/quill-delta-fork"
   },
   "deprecated": false,
   "description": "Your powerful, rich text editor",
