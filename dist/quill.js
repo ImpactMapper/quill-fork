@@ -8370,7 +8370,7 @@
         function isLine(node) {
           if (node.childNodes.length === 0) return false; // Exclude embed blocks
           // in IM nodes are simple, avoid computeStyle
-          return blockElements.indexOf(nodeName) > -1;
+          return blockElements.indexOf(node.nodeName) > -1;
           // let style = computeStyle(node);
           // return ["block", "list-item"].indexOf(style.display) > -1;
         }
