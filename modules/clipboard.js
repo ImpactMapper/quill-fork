@@ -1,65 +1,57 @@
-import extend from 'extend';
-import Delta from 'quill-delta';
-import Parchment from 'parchment';
-import Quill from '../core/quill';
-import logger from '../core/logger';
-import Module from '../core/module';
+import extend from "extend";
+import Delta from "quill-delta";
+import Parchment from "parchment";
+import Quill from "../core/quill";
+import logger from "../core/logger";
+import Module from "../core/module";
 
-import { AlignAttribute, AlignStyle } from '../formats/align';
-import { BackgroundStyle } from '../formats/background';
-import { ColorStyle } from '../formats/color';
-import { DirectionAttribute, DirectionStyle } from '../formats/direction';
-import { FontStyle } from '../formats/font';
-import { SizeStyle } from '../formats/size';
+import { AlignAttribute, AlignStyle } from "../formats/align";
+import { BackgroundStyle } from "../formats/background";
+import { ColorStyle } from "../formats/color";
+import { DirectionAttribute, DirectionStyle } from "../formats/direction";
+import { FontStyle } from "../formats/font";
+import { SizeStyle } from "../formats/size";
 
-let debug = logger('quill:clipboard');
+let debug = logger("quill:clipboard");
 
-
-const DOM_KEY = '__ql-matcher';
+const DOM_KEY = "__ql-matcher";
 
 const CLIPBOARD_CONFIG = [
   [Node.TEXT_NODE, matchText],
   [Node.TEXT_NODE, matchNewline],
-  ['br', matchBreak],
+  ["br", matchBreak],
   [Node.ELEMENT_NODE, matchNewline],
   [Node.ELEMENT_NODE, matchBlot],
   [Node.ELEMENT_NODE, matchSpacing],
   [Node.ELEMENT_NODE, matchAttributor],
   [Node.ELEMENT_NODE, matchStyles],
-  ['li', matchIndent],
-  ['b', matchAlias.bind(matchAlias, 'bold')],
-  ['i', matchAlias.bind(matchAlias, 'italic')],
-  ['style', matchIgnore]
+  ["li", matchIndent],
+  ["b", matchAlias.bind(matchAlias, "bold")],
+  ["i", matchAlias.bind(matchAlias, "italic")],
+  ["style", matchIgnore],
 ];
 
-const ATTRIBUTE_ATTRIBUTORS = [
-  AlignAttribute,
-  DirectionAttribute
-].reduce(function(memo, attr) {
+const ATTRIBUTE_ATTRIBUTORS = [AlignAttribute, DirectionAttribute].reduce(function (memo, attr) {
   memo[attr.keyName] = attr;
   return memo;
 }, {});
 
-const STYLE_ATTRIBUTORS = [
-  AlignStyle,
-  BackgroundStyle,
-  ColorStyle,
-  DirectionStyle,
-  FontStyle,
-  SizeStyle
-].reduce(function(memo, attr) {
+const STYLE_ATTRIBUTORS = [AlignStyle, BackgroundStyle, ColorStyle, DirectionStyle, FontStyle, SizeStyle].reduce(function (
+  memo,
+  attr
+) {
   memo[attr.keyName] = attr;
   return memo;
-}, {});
-
+},
+{});
 
 class Clipboard extends Module {
   constructor(quill, options) {
     super(quill, options);
-    this.quill.root.addEventListener('paste', this.onPaste.bind(this));
-    this.container = this.quill.addContainer('ql-clipboard');
-    this.container.setAttribute('contenteditable', true);
-    this.container.setAttribute('tabindex', -1);
+    this.quill.root.addEventListener("paste", this.onPaste.bind(this));
+    this.container = this.quill.addContainer("ql-clipboard");
+    this.container.setAttribute("contenteditable", true);
+    this.container.setAttribute("tabindex", -1);
     this.matchers = [];
     CLIPBOARD_CONFIG.concat(this.options.matchers).forEach((pair) => {
       this.addMatcher(...pair);
@@ -71,22 +63,22 @@ class Clipboard extends Module {
   }
 
   convert(html) {
-    if (typeof html === 'string') {
-      this.container.innerHTML = html.replace(/\>\r?\n +\</g, '><'); // Remove spaces between tags
+    if (typeof html === "string") {
+      this.container.innerHTML = html.replace(/\>\r?\n +\</g, "><"); // Remove spaces between tags
     }
     let [elementMatchers, textMatchers] = this.prepareMatching();
     let delta = traverse(this.container, elementMatchers, textMatchers);
     // Remove trailing newline
-    if (deltaEndsWith(delta, '\n') && delta.ops[delta.ops.length - 1].attributes == null) {
+    if (deltaEndsWith(delta, "\n") && delta.ops[delta.ops.length - 1].attributes == null) {
       delta = delta.compose(new Delta().retain(delta.length() - 1).delete(1));
     }
-    debug.log('convert', this.container.innerHTML, delta);
-    this.container.innerHTML = '';
+    debug.log("convert", this.container.innerHTML, delta);
+    this.container.innerHTML = "";
     return delta;
   }
 
   dangerouslyPasteHTML(index, html, source = Quill.sources.API) {
-    if (typeof index === 'string') {
+    if (typeof index === "string") {
       return this.quill.setContents(this.convert(index), html);
     } else {
       let paste = this.convert(html);
@@ -112,7 +104,8 @@ class Clipboard extends Module {
   }
 
   prepareMatching() {
-    let elementMatchers = [], textMatchers = [];
+    let elementMatchers = [],
+      textMatchers = [];
     this.matchers.forEach((pair) => {
       let [selector, matcher] = pair;
       switch (selector) {
@@ -135,21 +128,20 @@ class Clipboard extends Module {
   }
 }
 Clipboard.DEFAULTS = {
-  matchers: []
+  matchers: [],
 };
 
-
 function applyFormat(delta, format, value) {
-  if (typeof format === 'object') {
-    return Object.keys(format).reduce(function(delta, key) {
+  if (typeof format === "object") {
+    return Object.keys(format).reduce(function (delta, key) {
       return applyFormat(delta, key, format[key]);
     }, delta);
   } else {
-    return delta.reduce(function(delta, op) {
+    return delta.reduce(function (delta, op) {
       if (op.attributes && op.attributes[format]) {
         return delta.push(op);
       } else {
-        return delta.insert(op.insert, extend({}, {[format]: value}, op.attributes));
+        return delta.insert(op.insert, extend({}, { [format]: value }, op.attributes));
       }
     }, new Delta());
   }
@@ -157,49 +149,53 @@ function applyFormat(delta, format, value) {
 
 function computeStyle(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return {};
-  const DOM_KEY = '__ql-computed-style';
+  const DOM_KEY = "__ql-computed-style";
   return node[DOM_KEY] || (node[DOM_KEY] = window.getComputedStyle(node));
 }
 
 function deltaEndsWith(delta, text) {
   let endText = "";
   for (let i = delta.ops.length - 1; i >= 0 && endText.length < text.length; --i) {
-    let op  = delta.ops[i];
-    if (typeof op.insert !== 'string') break;
+    let op = delta.ops[i];
+    if (typeof op.insert !== "string") break;
     endText = op.insert + endText;
   }
-  return endText.slice(-1*text.length) === text;
+  return endText.slice(-1 * text.length) === text;
 }
 
 function isLine(node) {
-  if (node.childNodes.length === 0) return false;   // Exclude embed blocks
+  if (node.childNodes.length === 0) return false; // Exclude embed blocks
   let style = computeStyle(node);
-  return ['block', 'list-item'].indexOf(style.display) > -1;
+  return ["block", "list-item"].indexOf(style.display) > -1;
 }
 
-function traverse(node, elementMatchers, textMatchers) {  // Post-order
+function traverse(node, elementMatchers, textMatchers) {
+  // Post-order
   if (node.nodeType === node.TEXT_NODE) {
-    return textMatchers.reduce(function(delta, matcher) {
+    return textMatchers.reduce(function (delta, matcher) {
       return matcher(node, delta);
     }, new Delta());
   } else if (node.nodeType === node.ELEMENT_NODE) {
-    return [].reduce.call(node.childNodes || [], (delta, childNode) => {
-      let childrenDelta = traverse(childNode, elementMatchers, textMatchers);
-      if (childNode.nodeType === node.ELEMENT_NODE) {
-        childrenDelta = elementMatchers.reduce(function(childrenDelta, matcher) {
-          return matcher(childNode, childrenDelta);
-        }, childrenDelta);
-        childrenDelta = (childNode[DOM_KEY] || []).reduce(function(childrenDelta, matcher) {
-          return matcher(childNode, childrenDelta);
-        }, childrenDelta);
-      }
-      return delta.concat(childrenDelta);
-    }, new Delta());
+    return [].reduce.call(
+      node.childNodes || [],
+      (delta, childNode) => {
+        let childrenDelta = traverse(childNode, elementMatchers, textMatchers);
+        if (childNode.nodeType === node.ELEMENT_NODE) {
+          childrenDelta = elementMatchers.reduce(function (childrenDelta, matcher) {
+            return matcher(childNode, childrenDelta);
+          }, childrenDelta);
+          childrenDelta = (childNode[DOM_KEY] || []).reduce(function (childrenDelta, matcher) {
+            return matcher(childNode, childrenDelta);
+          }, childrenDelta);
+        }
+        return delta.concat(childrenDelta);
+      },
+      new Delta()
+    );
   } else {
     return new Delta();
   }
 }
-
 
 function matchAlias(format, node, delta) {
   return applyFormat(delta, format, true);
@@ -210,21 +206,24 @@ function matchAttributor(node, delta) {
   let classes = Parchment.Attributor.Class.keys(node);
   let styles = Parchment.Attributor.Style.keys(node);
   let formats = {};
-  attributes.concat(classes).concat(styles).forEach((name) => {
-    let attr = Parchment.query(name, Parchment.Scope.ATTRIBUTE);
-    if (attr != null) {
-      formats[attr.attrName] = attr.value(node);
-      if (formats[attr.attrName]) return;
-    }
-    if (ATTRIBUTE_ATTRIBUTORS[name] != null) {
-      attr = ATTRIBUTE_ATTRIBUTORS[name];
-      formats[attr.attrName] = attr.value(node) || undefined;
-    }
-    if (STYLE_ATTRIBUTORS[name] != null) {
-      attr = STYLE_ATTRIBUTORS[name];
-      formats[attr.attrName] = attr.value(node) || undefined;
-    }
-  });
+  attributes
+    .concat(classes)
+    .concat(styles)
+    .forEach((name) => {
+      let attr = Parchment.query(name, Parchment.Scope.ATTRIBUTE);
+      if (attr != null) {
+        formats[attr.attrName] = attr.value(node);
+        if (formats[attr.attrName]) return;
+      }
+      if (ATTRIBUTE_ATTRIBUTORS[name] != null) {
+        attr = ATTRIBUTE_ATTRIBUTORS[name];
+        formats[attr.attrName] = attr.value(node) || undefined;
+      }
+      if (STYLE_ATTRIBUTORS[name] != null) {
+        attr = STYLE_ATTRIBUTORS[name];
+        formats[attr.attrName] = attr.value(node) || undefined;
+      }
+    });
   if (Object.keys(formats).length > 0) {
     delta = applyFormat(delta, formats);
   }
@@ -241,15 +240,15 @@ function matchBlot(node, delta) {
       embed[match.blotName] = value;
       delta = new Delta().insert(embed, match.formats(node));
     }
-  } else if (typeof match.formats === 'function') {
+  } else if (typeof match.formats === "function") {
     delta = applyFormat(delta, match.blotName, match.formats(node));
   }
   return delta;
 }
 
 function matchBreak(node, delta) {
-  if (!deltaEndsWith(delta, '\n')) {
-    delta.insert('\n');
+  if (!deltaEndsWith(delta, "\n")) {
+    delta.insert("\n");
   }
   return delta;
 }
@@ -260,34 +259,36 @@ function matchIgnore() {
 
 function matchIndent(node, delta) {
   let match = Parchment.query(node);
-  if (match == null || match.blotName !== 'list-item' || !deltaEndsWith(delta, '\n')) {
+  if (match == null || match.blotName !== "list-item" || !deltaEndsWith(delta, "\n")) {
     return delta;
   }
-  let indent = -1, parent = node.parentNode;
-  while (!parent.classList.contains('ql-clipboard')) {
-    if ((Parchment.query(parent) || {}).blotName === 'list') {
+  let indent = -1,
+    parent = node.parentNode;
+  while (!parent.classList.contains("ql-clipboard")) {
+    if ((Parchment.query(parent) || {}).blotName === "list") {
       indent += 1;
     }
     parent = parent.parentNode;
   }
   if (indent <= 0) return delta;
-  return delta.compose(new Delta().retain(delta.length() - 1).retain(1, { indent: indent}));
+  return delta.compose(new Delta().retain(delta.length() - 1).retain(1, { indent: indent }));
 }
 
 function matchNewline(node, delta) {
-  if (!deltaEndsWith(delta, '\n')) {
+  if (!deltaEndsWith(delta, "\n")) {
     if (isLine(node) || (delta.length() > 0 && node.nextSibling && isLine(node.nextSibling))) {
-      delta.insert('\n');
+      delta.insert("\n");
     }
   }
   return delta;
 }
 
 function matchSpacing(node, delta) {
-  if (isLine(node) && node.nextElementSibling != null && !deltaEndsWith(delta, '\n\n')) {
-    let nodeHeight = node.offsetHeight + parseFloat(computeStyle(node).marginTop) + parseFloat(computeStyle(node).marginBottom);
-    if (node.nextElementSibling.offsetTop > node.offsetTop + nodeHeight*1.5) {
-      delta.insert('\n');
+  if (isLine(node) && node.nextElementSibling != null && !deltaEndsWith(delta, "\n\n")) {
+    let nodeHeight =
+      node.offsetHeight + parseFloat(computeStyle(node).marginTop) + parseFloat(computeStyle(node).marginBottom);
+    if (node.nextElementSibling.offsetTop > node.offsetTop + nodeHeight * 1.5) {
+      delta.insert("\n");
     }
   }
   return delta;
@@ -296,17 +297,18 @@ function matchSpacing(node, delta) {
 function matchStyles(node, delta) {
   let formats = {};
   let style = node.style || {};
-  if (style.fontStyle && computeStyle(node).fontStyle === 'italic') {
+  if (style.fontStyle && computeStyle(node).fontStyle === "italic") {
     formats.italic = true;
   }
-  if (style.fontWeight && computeStyle(node).fontWeight === 'bold') {
+  if (style.fontWeight && computeStyle(node).fontWeight === "bold") {
     formats.bold = true;
   }
   if (Object.keys(formats).length > 0) {
     delta = applyFormat(delta, formats);
   }
-  if (parseFloat(style.textIndent || 0) > 0) {  // Could be 0.5in
-    delta = new Delta().insert('\t').concat(delta);
+  if (parseFloat(style.textIndent || 0) > 0) {
+    // Could be 0.5in
+    delta = new Delta().insert("\t").concat(delta);
   }
   return delta;
 }
@@ -314,31 +316,31 @@ function matchStyles(node, delta) {
 function matchText(node, delta) {
   let text = node.data;
   // Word represents empty line with <o:p>&nbsp;</o:p>
-  if (node.parentNode.tagName === 'O:P') {
+  if (node.parentNode.tagName === "O:P") {
     return delta.insert(text.trim());
   }
-  if (text.trim().length === 0 && node.parentNode.classList.contains('ql-clipboard')) {
+  if (text.trim().length === 0 && node.parentNode.classList.contains("ql-clipboard")) {
     return delta;
   }
-  if (!computeStyle(node.parentNode).whiteSpace.startsWith('pre')) {
-    // eslint-disable-next-line func-style
-    let replacer = function(collapse, match) {
-      match = match.replace(/[^\u00a0]/g, '');    // \u00a0 is nbsp;
-      return match.length < 1 && collapse ? ' ' : match;
-    };
-    text = text.replace(/\r\n/g, ' ').replace(/\n/g, ' ');
-    text = text.replace(/\s\s+/g, replacer.bind(replacer, true));  // collapse whitespace
-    if ((node.previousSibling == null && isLine(node.parentNode)) ||
-        (node.previousSibling != null && isLine(node.previousSibling))) {
-      text = text.replace(/^\s+/, replacer.bind(replacer, false));
-    }
-    if ((node.nextSibling == null && isLine(node.parentNode)) ||
-        (node.nextSibling != null && isLine(node.nextSibling))) {
-      text = text.replace(/\s+$/, replacer.bind(replacer, false));
-    }
-  }
+  // IM doesn't use this and it costs a lot
+  // if (!computeStyle(node.parentNode).whiteSpace.startsWith('pre')) {
+  //   // eslint-disable-next-line func-style
+  //   let replacer = function(collapse, match) {
+  //     match = match.replace(/[^\u00a0]/g, '');    // \u00a0 is nbsp;
+  //     return match.length < 1 && collapse ? ' ' : match;
+  //   };
+  //   text = text.replace(/\r\n/g, ' ').replace(/\n/g, ' ');
+  //   text = text.replace(/\s\s+/g, replacer.bind(replacer, true));  // collapse whitespace
+  //   if ((node.previousSibling == null && isLine(node.parentNode)) ||
+  //       (node.previousSibling != null && isLine(node.previousSibling))) {
+  //     text = text.replace(/^\s+/, replacer.bind(replacer, false));
+  //   }
+  //   if ((node.nextSibling == null && isLine(node.parentNode)) ||
+  //       (node.nextSibling != null && isLine(node.nextSibling))) {
+  //     text = text.replace(/\s+$/, replacer.bind(replacer, false));
+  //   }
+  // }
   return delta.insert(text);
 }
-
 
 export { Clipboard as default, matchAttributor, matchBlot, matchNewline, matchSpacing, matchText };
