@@ -7846,8 +7846,10 @@
 
         function isLine(node) {
           if (node.childNodes.length === 0) return false; // Exclude embed blocks
-          var style = computeStyle(node);
-          return ["block", "list-item"].indexOf(style.display) > -1;
+          // in IM nodes are simple, avoid computeStyle
+          return ["p", "h1", "h2", "h3", "h4", "h5", "div", "ul", "li", "ol", "blockquote", "pre"].indexOf(nodeName) > -1;
+          // let style = computeStyle(node);
+          // return ["block", "list-item"].indexOf(style.display) > -1;
         }
 
         function traverse(node, elementMatchers, textMatchers) {
