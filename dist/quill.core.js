@@ -7844,7 +7844,7 @@
           return endText.slice(-1 * text.length) === text;
         }
 
-        const blockElements = ["p", "h1", "h2", "h3", "h4", "h5", "div", "ul", "li", "ol", "blockquote", "pre"];
+        const blockElements = ["P", "H1", "H2", "H3", "H4", "H5", "DIV", "UL", "LI", "OL", "BLOCKQUOTE", "PRE"];
 
         function isLine(node) {
           if (node.childNodes.length === 0) return false; // Exclude embed blocks
