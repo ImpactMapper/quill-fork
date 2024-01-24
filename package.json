@@ -76,7 +76,7 @@
     "webdriver-manager": "^12.0.4",
     "webdriverio": "^4.6.2",
     "webpack": "^2.4.1",
-    "webpack-dev-server": "^2.4.2"
+    "webpack-dev-server": "^3.9.0"
   },
   "files": [
     "assets",
